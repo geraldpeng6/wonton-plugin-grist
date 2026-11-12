@@ -17,7 +17,7 @@ identity_check() {
     { echo "主人不是安装管理员：$(head -c 200 <<<"$body")"; return 1; }
 }
 
-# 数据：在“home”站点建一张文档、写一行带随机标记的记录；
+# 数据：建一张文档、写一行带随机标记的记录；
 # 重装/升级后按文档 id 读回这一行，标记还在才算数。
 _data_post() { # <路径> <JSON>：带会话调 Grist 的 REST 接口，输出响应体
   dweb "$1" -X POST -H 'Content-Type: application/json' --data "$2"
@@ -28,8 +28,8 @@ data_write() {
   marker="probe-$(head -c 6 /dev/urandom | base64 | tr -dc 'a-z0-9' | head -c 8)"
   local orgs org_id workspaces ws_id doc doc_id out
   orgs="$(dweb /api/orgs)" || { echo "列站点失败：$orgs"; return 1; }
-  org_id="$(jq -r '.[] | select(.domain == "home") | .id' <<<"$orgs" | head -1)"
-  [[ -n "$org_id" ]] || { echo "找不到 home 站点：$(head -c 200 <<<"$orgs")"; return 1; }
+  org_id="$(jq -r '.[0].id // empty' <<<"$orgs")"
+  [[ -n "$org_id" ]] || { echo "没有可用的站点：$(head -c 200 <<<"$orgs")"; return 1; }
   workspaces="$(dweb "/api/orgs/$org_id/workspaces")" || { echo "列工作区失败：$workspaces"; return 1; }
   ws_id="$(jq -r '.[0].id' <<<"$workspaces")"
   [[ -n "$ws_id" && "$ws_id" != null ]] || { echo "home 站点没有工作区：$(head -c 200 <<<"$workspaces")"; return 1; }

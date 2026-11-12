@@ -20,10 +20,14 @@ services:
       GRIST_DEFAULT_EMAIL: ${WONTON_OWNER_EMAIL:?核心没有注入主人邮箱}
       # 网关代登录：网关认出用户后带上 X-Wonton-User。
       GRIST_FORWARD_AUTH_HEADER: X-Wonton-User
-      # 单个家庭站点，首页直接落在根路径，不用 /o/<站点名> 前缀（上游自托管文档推荐）。
-      GRIST_SINGLE_ORG: home
+      # 单个家庭站点：沿用内置站点 docs，根路径就是首页（上游自托管文档的 GRIST_SINGLE_ORG 用法）。
+      # 不要设成别的名字：上游为自定义站点预建管理员时拿邮箱当显示名，登录后右上角会显示邮箱而不是名字。
+      GRIST_SINGLE_ORG: docs
       # 新安装默认先进 /boot 的首次设置向导；插件已把该配的都配好，直接投入服务。
       GRIST_IN_SERVICE: "true"
+      # 每个请求都认代登录头、不依赖 Grist 自己的会话：登录态始终和网关一致，不会出现会话和请求头
+      # 各认一个账号的情况（上游 forwarded-headers 文档的 K8s 变体在用同一开关）。
+      GRIST_IGNORE_SESSION: "1"
       # 不申请高权限，公式沙箱退回不隔离模式：公式以容器用户直接运行，
       # 别导入陌生人的表格（见 README）。上游默认值 gvisor 需要 SYS_PTRACE 等能力。
       GRIST_SANDBOX_FLAVOR: unsandboxed
