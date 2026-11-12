@@ -3,16 +3,22 @@
 # dweb / web_get 等，见 scripts/probes.sh。插件不声明 MCP（上游社区版没有内置 MCP 服务），
 # “工具”一项由套件按清单没有 mcp 记 N/A。
 #
-# 页面：Grist 是单页应用，引导页里有 window.gristConfig。
-web_assert() { grep -q 'window.gristConfig' && grep -q 'Grist'; }
+# 页面：Grist 是单页应用，引导页里有 window.gristConfig。页面从标准输入进来只能读一次：
+# 先整个读进变量，再对变量做两个断言（对 stdin 连 grep 两次，第二次是空的）。
+web_assert() {
+  local page
+  page="$(cat)"
+  grep -q 'window.gristConfig' <<<"$page" && grep -q 'Grist' <<<"$page"
+}
 
-# 身份：Grist 的“当前用户”接口。网关注入的内部邮箱就是主人的 Grist 账号，
-# GRIST_DEFAULT_EMAIL 用的是同一个邮箱，所以主人必须是安装管理员。
+# 身份：Grist 的“当前用户”接口。登录邮箱是核心注入的内部邮箱，域名随环境变（不是通知地址
+# SMOKE_OWNER_EMAIL），认人按用户名（头里邮箱的前缀）加安装管理员标志；两个值都来自网关注入的头，
+# 和 GRIST_DEFAULT_EMAIL 同源，所以主人登录即管理员。
 identity_check() {
   local body
   body="$(dweb /api/session/access/active)" || { echo "请求失败：$body"; return 1; }
-  grep -qF "\"email\":\"$SMOKE_OWNER_EMAIL\"" <<<"$body" ||
-    { echo "当前用户不是主人（$SMOKE_OWNER_EMAIL）：$(head -c 200 <<<"$body")"; return 1; }
+  grep -qF "\"name\":\"$SMOKE_OWNER\"" <<<"$body" ||
+    { echo "当前用户不是主人（$SMOKE_OWNER）：$(head -c 200 <<<"$body")"; return 1; }
   grep -qF '"isInstallAdmin":true' <<<"$body" ||
     { echo "主人不是安装管理员：$(head -c 200 <<<"$body")"; return 1; }
 }
